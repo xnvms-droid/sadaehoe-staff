@@ -76,6 +76,7 @@ body{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
 .badge{font-size:13px;padding:4px 10px;border-radius:999px;background:#eef2ff;color:var(--brand);font-weight:600}
 .badge.arrive{background:var(--accent-soft);color:#c2410c}
 .badge.award{background:#fdf3d7;color:#8a5a00}
+.badge.carry{background:#1f2937;color:#fff}
 .summary{margin-top:12px;background:#f7f9fc;border-left:4px solid var(--brand-2);padding:10px 12px;border-radius:8px;font-size:15px}
 .summary b{display:block;font-size:12px;color:var(--sub);margin-bottom:2px;font-weight:600}
 .note{margin-top:10px;background:var(--warn-soft);color:#7c2d12;padding:10px 12px;border-radius:8px;font-size:14px}
@@ -133,9 +134,9 @@ h2.sec{font-size:18px;margin:22px 0 8px}
 .map-where small{display:block;font-weight:500;color:#7f1d1d;font-size:12px}
 .map{position:relative;border-radius:10px;overflow:hidden;background:#ddd;line-height:0}
 .map img{width:100%;height:auto;display:block}
-.map .dim{position:absolute;inset:0;pointer-events:none;transition:opacity .2s;
-  background:radial-gradient(ellipse 13% 17% at var(--x) var(--y), rgba(0,0,0,0) 0%, rgba(0,0,0,0) 55%, rgba(0,0,0,.62) 100%)}
-.map.all .dim{opacity:0}
+.map .here{position:absolute;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;background:#2563eb;color:#fff;font-size:17px;line-height:30px;text-align:center;box-shadow:0 0 0 3px #fff,0 2px 6px rgba(0,0,0,.4);pointer-events:none}
+.map .here-tag{position:absolute;transform:translate(-50%,24px);background:#2563eb;color:#fff;font-size:12px;font-weight:800;line-height:1.2;padding:4px 8px;border-radius:7px;white-space:nowrap;pointer-events:none;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.here-note{margin-top:6px;font-size:13px;color:#1e3a8a;background:#eff6ff;border-radius:8px;padding:7px 10px}
 .map .ring{position:absolute;left:var(--x);top:var(--y);width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;border:4px solid #ef4444;box-shadow:0 0 0 3px #fff;pointer-events:none;animation:pulse 1.4s ease-out infinite}
 @keyframes pulse{0%{transform:scale(.7);opacity:1}70%{transform:scale(1.5);opacity:.25}100%{transform:scale(.7);opacity:1}}
 .map .tag{position:absolute;left:var(--x);top:var(--y);transform:translate(-50%,-150%);background:#ef4444;color:#fff;font-size:13px;font-weight:800;line-height:1.2;padding:5px 9px;border-radius:8px;white-space:nowrap;pointer-events:none;box-shadow:0 2px 6px rgba(0,0,0,.3)}
@@ -351,6 +352,7 @@ footer{font-size:12px;color:var(--sub);text-align:center;margin-top:30px;line-he
         <span class="badge">${esc(p.pos)}</span>
         <span class="badge arrive">당일 도착 ${esc(p.arrive)}</span>
         ${p.award ? `<span class="badge award">🏅 ${esc(p.award)} 수상</span>` : ""}
+        ${(p.carry || []).map(c => `<span class="badge carry">📻 ${esc(c)} 지참</span>`).join("")}
         <span class="badge">배정 업무 ${list.length}건</span>
       </div>
       ${p.summary ? `<div class="summary"><b>업무 요약 (매뉴얼 별첨1)</b>${esc(p.summary)}</div>` : ""}
@@ -389,6 +391,7 @@ footer{font-size:12px;color:var(--sub);text-align:center;margin-top:30px;line-he
             ${t.place && t.place !== "-" ? `<div class="place">📍 ${esc(t.place)}</div>` : ""}
             ${role ? `<div class="myrole">나의 역할 · <b>${esc(role)}</b></div>` : ""}
             ${t.pickup ? pickupHTML(t.pickup, name) : ""}
+            ${t.pickup && t.map ? pickupMapHTML(t.map) : ""}
             ${t.map ? mapHTML(t.map, name) : ""}
             ${t.desc && t.desc.length ? `<ul>${t.desc.map(d => `<li>${esc(d)}</li>`).join("")}</ul>` : ""}
             ${t.prep && t.prep.length ? `<details><summary>준비물 ${t.prep.length}건</summary><ul>${t.prep.map(d => `<li>${esc(d)}</li>`).join("")}</ul></details>` : ""}
@@ -422,13 +425,22 @@ footer{font-size:12px;color:var(--sub);text-align:center;margin-top:30px;line-he
   // 받침 유무에 따라 을/를 선택
   function josa(w){ const c = w.charCodeAt(w.length-1); return (c >= 0xAC00 && c <= 0xD7A3 && (c-0xAC00)%28) ? "을" : "를"; }
 
+  function carryLI(name){
+    const c = (byName[name] && byName[name].carry) || [];
+    return c.length ? `<li><span class="no">📻</span><span><span class="hl">${c.map(esc).join("·")}</span> 꼭 챙기기!</span></li>` : "";
+  }
+
   function pickupHTML(pk, name){
     if(pk.from === name){
-      return `<div class="pickup"><ol><li><span class="no">!</span><span>주차안내 요원에게 <span class="hl">${esc(pk.item)}</span> 배부</span></li></ol></div>`;
+      return `<div class="pickup"><ol><li><span class="no">!</span><span>주차안내 요원에게 <span class="hl">${esc(pk.item)}</span> 배부</span></li>
+        ${carryLI(name)}
+        ${pk.at ? `<li><span class="no">📍</span><span>배부 장소: ${esc(pk.at)}</span></li>` : ""}</ol></div>`;
     }
     return `<div class="pickup"><ol>
-      <li><span class="no">1</span><span><span class="hl">${esc(pk.from)}</span>에게 <span class="hl">${esc(pk.item)}</span>${josa(pk.item)} 받아</span></li>
-      <li><span class="no">2</span><span>아래 지도의 내 위치로 이동</span></li></ol></div>`;
+      <li><span class="no">1</span><span><span class="hl">${esc(pk.from)}</span>에게 <span class="hl">${esc(pk.item)}</span>${josa(pk.item)} 받고</span></li>
+      ${carryLI(name)}
+      <li><span class="no">2</span><span>아래 지도의 내 위치(빨간 원)로 이동!</span></li>
+      ${pk.at ? `<li><span class="no">📍</span><span style="font-weight:500">수령 장소: ${esc(pk.at)}</span></li>` : ""}</ol></div>`;
   }
 
   function SPOT_OF(name){ return (typeof SPOTS !== "undefined" && SPOTS[name]) || null; }
@@ -440,7 +452,7 @@ footer{font-size:12px;color:var(--sub);text-align:center;margin-top:30px;line-he
     const mine = sp && sp.map === mapKey;
     if(!mine){
       return `<div class="map-box"><div class="map-where">지도에 개인 위치가 지정되어 있지 않습니다<small>근무 위치는 비상연락처(현장 담당자)에게 확인하여 주십시오.</small></div>
-        <div class="map all"><img src="${esc(M.src)}" alt="${esc(M.title)} 배치도" loading="lazy"></div>
+        <div class="map"><img src="${esc(M.src)}" alt="${esc(M.title)} 배치도" loading="lazy">${hereHTML(M)}</div>
         <div class="map-tools"><a href="${esc(M.src)}" target="_blank" rel="noopener">🔍 크게 보기</a></div></div>`;
     }
     const same = Object.keys(SPOTS).filter(n => n !== name && SPOTS[n].map === mapKey && SPOTS[n].x === sp.x && SPOTS[n].y === sp.y);
@@ -448,22 +460,30 @@ footer{font-size:12px;color:var(--sub);text-align:center;margin-top:30px;line-he
       <div class="map-where">📍 내 위치: ${esc(sp.where)}<small>${esc(M.title)} · 빨간 원 위치로 이동하여 주십시오${same.length ? " (함께: " + same.map(esc).join(", ") + ")" : ""}</small></div>
       <div class="map" style="--x:${sp.x}%;--y:${sp.y}%">
         <img src="${esc(M.src)}" alt="${esc(M.title)} 배치도" loading="lazy">
-        <div class="dim"></div><div class="ring"></div>
+        ${hereHTML(M)}<div class="ring"></div>
         <div class="tag${sp.x < 12 ? " left" : ""}${sp.x > 85 ? " right" : ""}${sp.y < 22 ? " below" : ""}">${esc(name)} 여기!</div>
       </div>
+      ${M.here ? `<div class="here-note">🔵 <b>파란 ★ = 현위치</b> — 이곳에서 경광봉·스태프 명찰을 받은 후 빨간 원 위치로 이동</div>` : ""}
       <div class="map-tools">
-        <button type="button" data-toggle-map>👥 전체 인원 위치 보기</button>
         <a href="${esc(M.src)}" target="_blank" rel="noopener">🔍 크게 보기</a>
       </div></div>`;
   }
 
-  document.addEventListener("click", e => {
-    const b = e.target.closest("[data-toggle-map]");
-    if(!b) return;
-    const m = b.closest(".map-box").querySelector(".map");
-    const on = m.classList.toggle("all");
-    b.textContent = on ? "📍 내 위치만 강조" : "👥 전체 인원 위치 보기";
-  });
+  // 담당 지도에 현위치가 없는 경우(부가대 본관 등), 현위치가 있는 지도를 따로 보여줌
+  function pickupMapHTML(mapKey){
+    if(typeof MAPS === "undefined" || !MAPS[mapKey] || MAPS[mapKey].here) return "";
+    const key = Object.keys(MAPS).find(k => MAPS[k].here);
+    if(!key) return "";
+    const M = MAPS[key];
+    return `<div class="map-box"><div class="here-note">🔵 <b>먼저 이곳(파란 ★ 현위치)에서 수령</b> — ${esc(M.title)}</div>
+      <div class="map" style="margin-top:6px"><img src="${esc(M.src)}" alt="${esc(M.title)} 현위치" loading="lazy">${hereHTML(M)}</div></div>`;
+  }
+
+  function hereHTML(M){
+    if(!M.here) return "";
+    const pos = `left:${M.here.x}%;top:${M.here.y}%`;
+    return `<div class="here" style="${pos}">★</div><div class="here-tag" style="${pos}">${esc(M.here.label || "현위치")}</div>`;
+  }
 
   function withHTML(others, leads){
     const LIMIT = 10;
